@@ -27,7 +27,9 @@ export type Expr<A> =
   | { a?: A, tag: "id", name: string, global?: boolean }
   | { a?: A, tag: "call", name: string, args: Expr<A>[] }
 
-const ops = {"+": true, "-": true, ">": true, "and": true, "or": true};
+const ops = {"+": true, "-": true, "*": true, "//":true, "%":true, 
+              ">": true, "<":true, "<=":true, ">=":true, "==":true,
+              "and": true, "or": true, "is":true };
 export type Op = keyof (typeof ops);
 export function isOp(maybeOp : string) : maybeOp is Op {
   return maybeOp in ops;

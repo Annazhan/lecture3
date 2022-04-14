@@ -9,12 +9,41 @@ export function tcExpr(e : Expr<any>, functions : FunctionsEnv, variables : Body
     case "true": return { ...e, a: "bool" };
     case "false": return { ...e, a: "bool" };
     case "binop": {
+      const newRhs = tcExpr(e.rhs, functions, variables);
+      const newLhs = tcExpr(e.rhs, functions, variables);
       switch(e.op) {
-        case "+": return { ...e, a: "int" };
-        case "-": return { ...e, a: "int" };
-        case ">": return { ...e, a: "bool" };
-        case "and": return { ...e, a: "bool" };
-        case "or": return { ...e, a: "bool" };
+        case "+":
+        case "-":
+        case "*":
+        case "//":
+        case "%":
+          if (newRhs.a != "int" || newLhs.a != "int"){
+              throw new Error(`TypeError: The type of ${newRhs.a} doesn't match with ${newLhs.a}`)
+          }
+          return { tag: "binop", op: e.op , lhs:newLhs, rhs: newRhs, a: "int" };
+        case ">" : 
+        case "<" :
+        case ">=":
+        case "<=":
+          if (newRhs.a != "int" || newLhs.a != "int"){
+              throw new Error(`TypeError: The type of ${newRhs.a} doesn't match with ${newLhs.a}`)
+          }
+          return { tag: "binop", op: e.op , lhs:newLhs, rhs: newRhs, a: "bool" };
+        case "==":
+          if ((newRhs.a != "int" || newLhs.a != "int") && (newRhs.a != "bool" || newLhs.a != "bool")){
+            throw new Error(`TypeError: The type of ${newRhs.a} doesn't match with ${newLhs.a}`)
+          }
+        return { tag: "binop", op: e.op , lhs:newLhs, rhs: newRhs, a: "bool" };
+        case "and": 
+        case "or":
+          if (newRhs.a != "bool" || newLhs.a != "bool") {
+            throw new Error(`TypeError: The type of ${newRhs.a} doesn't match with ${newLhs.a}`)
+          }
+          return { tag: "binop", op: e.op , lhs:newLhs, rhs: newRhs, a: "bool" };
+        case "is":
+          if (newRhs.a === "bool" || newLhs.a === "bool" || newRhs.a === "int" || newLhs.a === "int"){
+            throw new Error(`TypeError: IS can't be used on ${newRhs.a} or ${newLhs.a}`);
+          }
         default: throw new Error(`Unhandled op ${e.op}`)
       }
     }
