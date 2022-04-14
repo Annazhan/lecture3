@@ -35,7 +35,13 @@ export function traverseStmt(s : string, t : TreeCursor) : Stmt<any> {
       var name = s.substring(t.from, t.to);
       t.nextSibling(); 
       let paramTC = t
-      if(paramTC.type.name != "TypeDef"){
+      if(paramTC.type.name == "AssignOp"){
+        t.nextSibling();
+        var value = traverseExpr(s,t);
+        t.parent();
+        return {tag:"assign", name, value};
+      }
+      else if(paramTC.type.name != "TypeDef"){
         throw new Error("ParseError: The paramater "+ name + " doesn't have type")
       }
       t.firstChild()
@@ -47,7 +53,7 @@ export function traverseStmt(s : string, t : TreeCursor) : Stmt<any> {
     
       var value = traverseExpr(s, t);
       t.parent();
-      return { tag: "assign", name, value,a: type};
+      return { tag: "def", name, value,a: type};
     case "ExpressionStatement":
       t.firstChild(); // The child is some kind of expression, the
                       // ExpressionStatement is just a wrapper with no information

@@ -8,7 +8,7 @@ type Env = Map<string, boolean>;
 function variableNames(stmts: Stmt<Type>[]) : string[] {
   const vars : Array<string> = [];
   stmts.forEach((stmt) => {
-    if(stmt.tag === "assign") { vars.push(stmt.name); }
+    if(stmt.tag === "def") { vars.push(stmt.name); }
   });
   return vars;
 }
@@ -35,11 +35,18 @@ export function opStmts(op : Op) {
   switch(op) {
     case "+": return [`i32.add`];
     case "-": return [`i32.sub`];
+    case "*": return [`i32.mul`];
+    case "//": return [`i32.div_s`];
+    case "%": return [`i32.rem_s`];
+    case "<": return [`i32.lt_s`];
     case ">": return [`i32.gt_s`];
+    case "<=": return [`i32.le_s`];
+    case ">=": return [`i32.ge_s`];
+    case "==": return [`i32.eq`];
     case "and": return [`i32.and`];
     case "or": return [`i32.or`];
     default:
-      throw new Error(`Unhandled or unknown op: ${op}`);
+      throw new Error(`CompileError: Unhandled or unknown op: ${op}`);
   }
 }
 
@@ -99,6 +106,7 @@ export function codeGenStmt(stmt : Stmt<Type>, locals : Env) : Array<string> {
       valStmts.push("return");
       return valStmts;
     case "assign":
+    case "def":
       var valStmts = codeGenExpr(stmt.value, locals);
       if(locals.has(stmt.name)) { valStmts.push(`(local.set $${stmt.name})`); }
       else { valStmts.push(`(global.set $${stmt.name})`); }
@@ -108,8 +116,8 @@ export function codeGenStmt(stmt : Stmt<Type>, locals : Env) : Array<string> {
       result.push("(local.set $scratch)");
       return result;
     case "while":
-      const whileCondition = codeGenExpr(stmt.condition, locals);
-      const whileBody = stmt.body.map(s => codeGenStmt(s, withParamsAndVariables)).flat();
+      const whileCondition = codeGenExpr(stmt.condition, locals).join("\n");
+      const whileBody = stmt.body.map(s => codeGenStmt(s, locals)).flat().join("\n");
       let loopName = "while_loop_"+Date.parse(new Date().toString())
       return[`(loop $${loopName}
         ${whileBody}

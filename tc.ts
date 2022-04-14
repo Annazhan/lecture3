@@ -10,7 +10,7 @@ export function tcExpr(e : Expr<any>, functions : FunctionsEnv, variables : Body
     case "false": return { ...e, a: "bool" };
     case "binop": {
       const newRhs = tcExpr(e.rhs, functions, variables);
-      const newLhs = tcExpr(e.rhs, functions, variables);
+      const newLhs = tcExpr(e.lhs, functions, variables);
       switch(e.op) {
         case "+":
         case "-":
@@ -76,7 +76,7 @@ export function tcExpr(e : Expr<any>, functions : FunctionsEnv, variables : Body
 
 export function tcStmt(s : Stmt<any>, functions : FunctionsEnv, variables : BodyEnv, currentReturn : Type) : Stmt<Type> {
   switch(s.tag) {
-    case "assign": {
+    case "def": {
       const rhs = tcExpr(s.value, functions, variables);
       if(variables.has(s.name) && variables.get(s.name) !== rhs.a) {
         throw new Error(`Cannot assign ${rhs} to ${variables.get(s.name)}`);
@@ -84,9 +84,21 @@ export function tcStmt(s : Stmt<any>, functions : FunctionsEnv, variables : Body
       if (rhs.a != s.a){
         throw new Error(`TypeError: The type ${s.a} of ${s.name} doesn't match with the type of value ${rhs.a}`)
       }
+      if (rhs.tag !== "number" && rhs.tag !== "true" && rhs.tag !== "false"){
+        throw new Error(`TypeError: definition should be literal`);
+      }
       variables.set(s.name, rhs.a);
       return { ...s, value: rhs };
     }
+    case "assign": 
+      const rhs = tcExpr(s.value, functions, variables);
+      if(!variables.has(s.name)){
+        throw new Error(`TypeError: ${s.name} has not defined yet`);
+      }
+      if(variables.has(s.name) && variables.get(s.name) !== rhs.a){
+        throw new Error(`Cannot assign ${rhs} to ${variables.get(s.name)}`);
+      }
+      return {...s, value: rhs}
     case "define": {
       const bodyvars = new Map<string, Type>(variables.entries());
       s.params.forEach(p => { bodyvars.set(p.name, p.typ)});
@@ -125,7 +137,7 @@ export function tcProgram(p : Stmt<any>[]) : Stmt<Type>[] {
 
   const globals = new Map<string, Type>();
   return p.map(s => {
-    if(s.tag === "assign") {
+    if(s.tag === "def") {
       const rhs = tcExpr(s.value, functions, globals);
       if(globals.has(s.name) && globals.get(s.name) !== rhs.a) {
         throw new Error(`Cannot assign ${rhs} to ${globals.get(s.name)}`);
