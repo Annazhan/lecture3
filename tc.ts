@@ -1,10 +1,11 @@
-import { Expr, Stmt, Type } from "./ast";
+import { Expr, FlowControl, Stmt, Type } from "./ast";
 
 type FunctionsEnv = Map<string, [Type[], Type]>;
 type BodyEnv = Map<string, Type>;
 
 export function tcExpr(e : Expr<any>, functions : FunctionsEnv, variables : BodyEnv) : Expr<Type> {
   switch(e.tag) {
+    case "none": return {...e, a: "none"};
     case "number": return { ...e, a: "int" };
     case "true": return { ...e, a: "bool" };
     case "false": return { ...e, a: "bool" };
@@ -124,7 +125,23 @@ export function tcStmt(s : Stmt<any>, functions : FunctionsEnv, variables : Body
       const whileBody = s.body.map(ws => tcStmt(ws, functions, variables, currentReturn));
       return {...s, condition: whileCondition, body: whileBody};
     }
+    case "pass":
+      return {...s, a: "none"};
+    case "flow":
+      const newIf = tcFlowCtrls(s.if, functions, variables, currentReturn);
+      const newElif = s.elif.map(elifs => tcFlowCtrls(elifs, functions, variables, currentReturn));
+      const newElse = s.else.map(es => tcStmt(es, functions, variables, currentReturn));
+      return {...s, if:newIf, elif: newElif, else: newElse};
   }
+}
+
+export function tcFlowCtrls(s : FlowControl<any>, functions : FunctionsEnv, variables : BodyEnv, currentReturn: Type) : FlowControl<Type> {
+  const newCondition = tcExpr(s.condition, functions, variables);
+  if(newCondition.a != "bool") {
+    throw new Error(`TypeError: if condition is not bool expression`);
+  }
+  const body = s.body.map(bs => tcStmt(bs, functions, variables, currentReturn));
+  return {...s, condition:newCondition, body: body};
 }
 
 export function tcProgram(p : Stmt<any>[]) : Stmt<Type>[] {

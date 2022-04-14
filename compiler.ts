@@ -1,5 +1,6 @@
+import exp from 'constants';
 import wabt from 'wabt';
-import {Stmt, Expr, Type, Op} from './ast';
+import {Stmt, Expr, Type, Op, FlowControl} from './ast';
 import {parseProgram} from './parser';
 import { tcProgram } from './tc';
 
@@ -52,6 +53,7 @@ export function opStmts(op : Op) {
 
 export function codeGenExpr(expr : Expr<Type>, locals : Env) : Array<string> {
   switch(expr.tag) {
+    case "none": return [`(i32.const -1)`];
     case "number": return [`(i32.const ${expr.value})`];
     case "true": return [`(i32.const 1)`];
     case "false": return [`(i32.const 0)`];
@@ -61,6 +63,14 @@ export function codeGenExpr(expr : Expr<Type>, locals : Env) : Array<string> {
       if(locals.has(expr.name)) { return [`(local.get $${expr.name})`]; }
       else { return [`(global.get $${expr.name})`]; }
     case "binop": {
+      if (expr.op === "is"){
+        if (expr.rhs.a === expr.lhs.a){
+          return [`(i32.const 1)`];
+        }
+        else{
+          return [`(i32.const 0)`];
+        }
+      }
       const lhsExprs = codeGenExpr(expr.lhs, locals);
       const rhsExprs = codeGenExpr(expr.rhs, locals);
       const opstmts = opStmts(expr.op);
@@ -123,9 +133,13 @@ export function codeGenStmt(stmt : Stmt<Type>, locals : Env) : Array<string> {
         ${whileBody}
         ${whileCondition}
         (br_if $${loopName}))`];
-
+    case "flow":
+      throw new Error("haven't been implemented yet");
+        
   }
 }
+
+
 export function compile(source : string) : string {
   let ast = parseProgram(source);
   ast = tcProgram(ast);

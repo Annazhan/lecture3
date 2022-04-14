@@ -1,6 +1,7 @@
+import { none } from 'binaryen';
 import { TreeCursor } from 'lezer';
 import {parser} from 'lezer-python';
-import {Parameter, Stmt, Expr, Type, isOp} from './ast';
+import {Parameter, Stmt, Expr, Type, isOp, FlowControl} from './ast';
 
 export function parseProgram(source : string) : Array<Stmt<any>> {
   const t = parser.parse(source).cursor();
@@ -110,7 +111,48 @@ export function traverseStmt(s : string, t : TreeCursor) : Stmt<any> {
         condition: whileCondition, 
         body: whileBody,
       }
+    case "PassStatement":
+      return {tag:"pass"};
+    case "IfStatement":
+      t.firstChild();
+      const ifBr = traversaFlowStmt(s, t);
+      let elifBr = [];
+      let elseBr = [];
+      if(t.next()){
+        t.nextSibling();
+        if(s.substring(t.from, t.to) === "elif"){
+          elifBr.push(traversaFlowStmt(s,t));
+        }
+        else if(s.substring(t.from, t.to) === 'else'){
+          t.nextSibling();
+          t.firstChild();
+          const body = []
+          while(t.nextSibling()){
+            elseBr.push(traverseStmt(s,t));
+          }
+          t.parent();
+        }
+      }
+      t.parent();
+      return {tag:"flow", if: ifBr, elif: elifBr, else: elseBr};
   }
+}
+
+export function traversaFlowStmt(s: string, t: TreeCursor): FlowControl<any> {
+  let name = s.substring(t.from, t.to);
+  t.nextSibling()
+  if(t.type.name != "BinaryExpression" && t.type.name != "Boolean"){
+    throw new Error("ParseError: invalid while condition");
+  }
+  const condition = traverseExpr(s, t);
+  t.nextSibling();
+  t.firstChild();
+  const body = []
+  while(t.nextSibling()){
+      body.push(traverseStmt(s,t));
+  }
+  t.parent();
+  return {name, condition, body};
 }
 
 export function traverseType(s : string, t : TreeCursor) : Type {
@@ -150,6 +192,10 @@ export function traverseParameters(s : string, t : TreeCursor) : Parameter[] {
 
 export function traverseExpr(s : string, t : TreeCursor) : Expr<any> {
   switch(t.type.name) {
+    case "None":
+      return {
+        tag:"none",
+      }
     case "Boolean":
       if(s.substring(t.from, t.to) === "True") { return { tag: "true" }; }
       else { return { tag: "false" }; }

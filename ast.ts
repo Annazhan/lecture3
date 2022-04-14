@@ -20,6 +20,7 @@ export type Stmt<A> =
   | { a?: A, tag: "pass"}
 
 export type Expr<A> = 
+  | { a?: A, tag:"none"}
   | { a?: A, tag: "number", value: number }
   | { a?: A, tag: "true" }
   | { a?: A, tag: "false" }
