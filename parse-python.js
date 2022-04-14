@@ -1,6 +1,6 @@
 const python = require('lezer-python');
 
-const input = "x : int = 2";
+const input = "if(true){x=1}";
 
 const tree = python.parser.parse(input);
 

@@ -107,6 +107,15 @@ export function codeGenStmt(stmt : Stmt<Type>, locals : Env) : Array<string> {
       const result = codeGenExpr(stmt.expr, locals);
       result.push("(local.set $scratch)");
       return result;
+    case "while":
+      const whileCondition = codeGenExpr(stmt.condition, locals);
+      const whileBody = stmt.body.map(s => codeGenStmt(s, withParamsAndVariables)).flat();
+      let loopName = "while_loop_"+Date.parse(new Date().toString())
+      return[`(loop $${loopName}
+        ${whileBody}
+        ${whileCondition}
+        (br_if $${loopName}))`];
+
   }
 }
 export function compile(source : string) : string {

@@ -41,7 +41,7 @@ export function tcExpr(e : Expr<any>, functions : FunctionsEnv, variables : Body
           }
           return { tag: "binop", op: e.op , lhs:newLhs, rhs: newRhs, a: "bool" };
         case "is":
-          if (newRhs.a === "bool" || newLhs.a === "bool" || newRhs.a === "int" || newLhs.a === "int"){
+          if (newRhs.a == "bool" || newLhs.a == "bool" || newRhs.a == "int" || newLhs.a == "int"){
             throw new Error(`TypeError: IS can't be used on ${newRhs.a} or ${newLhs.a}`);
           }
         default: throw new Error(`Unhandled op ${e.op}`)
@@ -100,9 +100,17 @@ export function tcStmt(s : Stmt<any>, functions : FunctionsEnv, variables : Body
     case "return": {
       const valTyp = tcExpr(s.value, functions, variables);
       if(valTyp.a !== currentReturn) {
-        throw new Error(`${valTyp} returned but ${currentReturn} expected.`);
+        throw new Error(`TypeError: ${valTyp} returned but ${currentReturn} expected.`);
       }
       return { ...s, value: valTyp };
+    }
+    case "while":{
+      const whileCondition = tcExpr(s.condition, functions, variables);
+      if(whileCondition.a !== "bool") {
+        throw new Error(`TypeError: while condition is not bool expression`);
+      }
+      const whileBody = s.body.map(ws => tcStmt(ws, functions, variables, currentReturn));
+      return {...s, condition: whileCondition, body: whileBody};
     }
   }
 }

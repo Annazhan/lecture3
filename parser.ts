@@ -80,7 +80,30 @@ export function traverseStmt(s : string, t : TreeCursor) : Stmt<any> {
         tag: "define",
         name, params, body, ret
       }
-      
+    case "WhileStatement":
+      t.firstChild();
+      if(s.substring(t.from, t.to) != "while"){
+        throw new Error("ParseError: not a while loop statement");
+      }
+      t.nextSibling();
+      let biConT = t
+      if(biConT.type.name != "BinaryExpression" && biConT.type.name != "Boolean"){
+        throw new Error("ParseError: invalid while condition");
+      }
+      const whileCondition = traverseExpr(s, t);
+      t.nextSibling();
+      t.firstChild();
+      const whileBody = []
+      while(t.nextSibling()){
+        whileBody.push(traverseStmt(s,t));
+      }
+      t.parent();
+      t.parent();
+      return{
+        tag:"while",
+        condition: whileCondition, 
+        body: whileBody,
+      }
   }
 }
 
